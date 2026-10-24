@@ -86,6 +86,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $terdapatSecondProses = isset($_POST['terdapat_second_proses']) ? 1 : 0;
             $keterangan = trim($_POST['keterangan'] ?? '');
 
+            /* Ambil nilai berat dari form */
+$beratPartRaw = trim($_POST['berat_part'] ?? '');
+$beratRunnerRaw = trim($_POST['berat_runner'] ?? '');
+
+/* Validasi nilai berat */
+if (
+    $beratPartRaw === '' ||
+    !is_numeric($beratPartRaw) ||
+    !is_finite((float) $beratPartRaw) ||
+    (float) $beratPartRaw < 0 ||
+    (float) $beratPartRaw > 99999999.99
+) {
+    throw new RuntimeException(
+        'Berat part harus berupa angka antara 0 sampai 99999999.99 gram.'
+    );
+}
+
+if (
+    $beratRunnerRaw === '' ||
+    !is_numeric($beratRunnerRaw) ||
+    !is_finite((float) $beratRunnerRaw) ||
+    (float) $beratRunnerRaw < 0 ||
+    (float) $beratRunnerRaw > 99999999.99
+) {
+    throw new RuntimeException(
+        'Berat runner harus berupa angka antara 0 sampai 99999999.99 gram.'
+    );
+}
+
+$beratPart = (float) $beratPartRaw;
+$beratRunner = (float) $beratRunnerRaw;
+
             /* Validasi wajib */
             if (
                 $kode === '' ||
@@ -161,6 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
+
             /*
              * Target per shift dan target per hari disimpan
              * sebagai standar perusahaan. Tidak dipaksa sama
@@ -170,87 +203,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              */
 
             if ($aksi === 'tambah') {
-                $stmt = $conn->prepare(
-                "INSERT INTO master_part (
-                    kode_part,
-                    nama_part,
-                    cycle_time,
-                    cavity,
-                    target_per_jam,
-                    target_per_shift,
-                    target_per_hari,
-                    material,
-                    warna,
-                    terdapat_second_proses,
-                    keterangan
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            );
+    $stmt = $conn->prepare(
+        "INSERT INTO master_part (
+            kode_part,
+            nama_part,
+            cycle_time,
+            cavity,
+            target_per_jam,
+            target_per_shift,
+            target_per_hari,
+            material,
+            warna,
+            terdapat_second_proses,
+            keterangan,
+            berat_part,
+            berat_runner
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
 
-            $stmt->bind_param(
-                'ssdiiiissis',
-                $kode,
-                $nama,
-                $cycleTime,
-                $cavity,
-                $targetJam,
-                $targetShift,
-                $targetHari,
-                $material,
-                $warna,
-                $terdapatSecondProses,
-                $keterangan
-            );
+    $stmt->bind_param(
+        'ssdiiiissisdd',
+        $kode,
+        $nama,
+        $cycleTime,
+        $cavity,
+        $targetJam,
+        $targetShift,
+        $targetHari,
+        $material,
+        $warna,
+        $terdapatSecondProses,
+        $keterangan,
+        $beratPart,
+        $beratRunner
+    );
 
-            $stmt->execute();
-            $stmt->close();
+    $stmt->execute();
+    $stmt->close();
 
-                flashPart('success', 'Data part berhasil ditambahkan.');
-                redirectPart();
-            }
+    flashPart('success', 'Data part berhasil ditambahkan.');
+    redirectPart();
+}
 
-            /* EDIT */
-            if ($id <= 0) {
-                throw new RuntimeException('ID part tidak valid.');
-            }
+           /* EDIT */
+if ($id <= 0) {
+    throw new RuntimeException('ID part tidak valid.');
+}
 
-            $stmt = $conn->prepare(
-            "UPDATE master_part
-            SET
-                kode_part = ?,
-                nama_part = ?,
-                cycle_time = ?,
-                cavity = ?,
-                target_per_jam = ?,
-                target_per_shift = ?,
-                target_per_hari = ?,
-                material = ?,
-                warna = ?,
-                terdapat_second_proses = ?,
-                keterangan = ?
-            WHERE id = ?"
-        );
+$stmt = $conn->prepare(
+    "UPDATE master_part
+     SET
+        kode_part = ?,
+        nama_part = ?,
+        cycle_time = ?,
+        cavity = ?,
+        target_per_jam = ?,
+        target_per_shift = ?,
+        target_per_hari = ?,
+        material = ?,
+        warna = ?,
+        terdapat_second_proses = ?,
+        keterangan = ?,
+        berat_part = ?,
+        berat_runner = ?
+     WHERE id = ?"
+);
 
-        $stmt->bind_param(
-            'ssdiiiissisi',
-            $kode,
-            $nama,
-            $cycleTime,
-            $cavity,
-            $targetJam,
-            $targetShift,
-            $targetHari,
-            $material,
-            $warna,
-            $terdapatSecondProses,
-            $keterangan,
-            $id
-        );
+$stmt->bind_param(
+    'ssdiiiissisddi',
+    $kode,
+    $nama,
+    $cycleTime,
+    $cavity,
+    $targetJam,
+    $targetShift,
+    $targetHari,
+    $material,
+    $warna,
+    $terdapatSecondProses,
+    $keterangan,
+    $beratPart,
+    $beratRunner,
+    $id
+);
 
-        $stmt->execute();
-        $stmt->close();
+$stmt->execute();
+$stmt->close();
 
-            flashPart('success', 'Data part berhasil diperbarui.');
-            redirectPart();
+flashPart('success', 'Data part berhasil diperbarui.');
+redirectPart();
         }
 
         /* -------------------------
@@ -360,6 +401,8 @@ $sql = "
         target_per_hari,
         material,
         warna,
+        berat_part,
+        berat_runner,
         status
     FROM master_part
 ";
@@ -765,22 +808,76 @@ unset($_SESSION['flash_part']);
                             <label class="form-label">Material</label>
 
                             <input type="text"
-                                   name="material"
-                                   class="form-control"
-                                   maxlength="100"
-                                   placeholder="Contoh: ABS"
-                                   value="<?= e($editData['material'] ?? '') ?>">
+                                name="material"
+                                class="form-control"
+                                maxlength="100"
+                                placeholder="Contoh: ABS"
+                                value="<?= e($editData['material'] ?? '') ?>">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Warna</label>
 
                             <input type="text"
-                                   name="warna"
-                                   class="form-control"
-                                   maxlength="100"
-                                   placeholder="Contoh: Hitam"
-                                   value="<?= e($editData['warna'] ?? '') ?>">
+                                name="warna"
+                                class="form-control"
+                                maxlength="100"
+                                placeholder="Contoh: Hitam"
+                                value="<?= e($editData['warna'] ?? '') ?>">
+                        </div>
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label for="berat_part" class="form-label">
+                                    Berat Part (gram)
+                                </label>
+
+                                <div class="input-group">
+                                    <input type="number"
+                                        name="berat_part"
+                                        id="berat_part"
+                                        class="form-control"
+                                        min="0"
+                                        max="99999999.99"
+                                        step="0.01"
+                                        placeholder="Contoh: 12.50"
+                                        value="<?= e($editData['berat_part'] ?? '0.00') ?>"
+                                        required>
+
+                                    <span class="input-group-text">gram</span>
+                                </div>
+
+                                <div class="form-text">
+                                    Masukkan berat satu part dalam gram.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="berat_runner" class="form-label">
+                                    Berat Runner (gram)
+                                </label>
+
+                                <div class="input-group">
+                                    <input type="number"
+                                        name="berat_runner"
+                                        id="berat_runner"
+                                        class="form-control"
+                                        min="0"
+                                        max="99999999.99"
+                                        step="0.01"
+                                        placeholder="Contoh: 3.25"
+                                        value="<?= e($editData['berat_runner'] ?? '0.00') ?>"
+                                        required>
+
+                                    <span class="input-group-text">gram</span>
+                                </div>
+
+                                <div class="form-text">
+                                    Masukkan berat runner dalam gram.
+                                </div>
+                            </div>
+
                         </div>
 
                         <div class="mb-3">
@@ -856,6 +953,8 @@ unset($_SESSION['flash_part']);
                                     <th>Second Proses</th>
                                     <th>Cycle Time</th>
                                     <th>Cavity</th>
+                                    <th>Berat Part</th>
+                                    <th>Berat Runner</th>
                                     <th>Target/Jam</th>
                                     <th>Target/Shift</th>
                                     <th>Target/Hari</th>
@@ -909,6 +1008,24 @@ unset($_SESSION['flash_part']);
                                         </td>
 
                                         <td><?= (int) $part['cavity'] ?></td>
+
+                                        <td class="target-value">
+                                            <?= number_format(
+                                                (float) ($part['berat_part'] ?? 0),
+                                                2,
+                                                ',',
+                                                '.'
+                                            ) ?> gr
+                                        </td>
+
+                                        <td class="target-value">
+                                            <?= number_format(
+                                                (float) ($part['berat_runner'] ?? 0),
+                                                2,
+                                                ',',
+                                                '.'
+                                            ) ?> gr
+                                        </td>
 
                                         <td class="target-value">
                                             <?= number_format(

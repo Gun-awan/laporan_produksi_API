@@ -167,11 +167,12 @@ if ($res) {
 $rows = [];
 
 $summary = [
-    'planning'  => 0,
-    'ok'        => 0,
-    'ng'        => 0,
-    'downtime'  => 0,
-    'target'    => 0
+    'planning' => 0,
+    'ok' => 0,
+    'ng' => 0,
+    'downtime' => 0,
+    'target' => 0,
+    'effective_runtime' => 0
 ];
 
 if (!$errors) {
@@ -422,20 +423,58 @@ if (!$errors) {
 
             $result = $stmt->get_result();
 
+            
             while ($r = $result->fetch_assoc()) {
+
+                $totalOK = (int)$r['total_ok'];
+                $targetPlanning = (int)($r['target_planning'] ?? 0);
+                $totalDowntime = (int)$r['total_downtime'];
+
+                // Persentase pencapaian target berdasarkan jumlah OK.
+                $r['persentase_target'] = $targetPlanning > 0
+                    ? ($totalOK / $targetPlanning) * 100
+                    : null;
+
+                // Effective Run Time dihitung dari waktu aktual.
+                $r['effective_runtime_menit'] = null;
+
+                $mulaiAktual = !empty($r['mulai_aktual'])
+                    ? strtotime($r['mulai_aktual'])
+                    : false;
+
+                $selesaiAktual = !empty($r['selesai_aktual'])
+                    ? strtotime($r['selesai_aktual'])
+                    : false;
+
+                if (
+                    $mulaiAktual !== false &&
+                    $selesaiAktual !== false &&
+                    $selesaiAktual >= $mulaiAktual
+                ) {
+                    $durasiAktual = (int)floor(
+                        ($selesaiAktual - $mulaiAktual) / 60
+                    );
+
+                    $r['effective_runtime_menit'] = max(
+                        0,
+                        $durasiAktual - $totalDowntime
+                    );
+                }
 
                 $rows[] = $r;
 
                 $summary['planning']++;
-
-                $summary['ok'] += (int)$r['total_ok'];
-
+                $summary['ok'] += $totalOK;
                 $summary['ng'] += (int)$r['total_ng'];
+                $summary['downtime'] += $totalDowntime;
+                $summary['target'] += $targetPlanning;
 
-                $summary['downtime'] += (int)$r['total_downtime'];
-
-                $summary['target'] += (int)($r['target_planning'] ?? 0);
+                if ($r['effective_runtime_menit'] !== null) {
+                    $summary['effective_runtime'] +=
+                        $r['effective_runtime_menit'];
+                }
             }
+
 
             $result->free();
         }
@@ -480,29 +519,32 @@ if ($export && !$errors) {
         h($tanggalSelesai ?: '-') .
     '</th></tr>';
 
-    echo '<tr>
-        <th>No</th>
-        <th>Tanggal Produksi</th>
-        <th>Shift</th>
-        <th>Line</th>
-        <th>Mesin</th>
-        <th>Urutan</th>
-        <th>Jam Rencana Mulai</th>
-        <th>Jam Rencana Selesai</th>
-        <th>Kode Part</th>
-        <th>Nama Part</th>
-        <th>JO Injection</th>
-        <th>JO Second Proses</th>
-        <th>Operator Utama</th>
-        <th>Operator SP</th>
-        <th>QC / IPQC</th>
-        <th>Kategori NG</th>
-        <th>Status</th>
-        <th>Target Planning</th>
-        <th>Total OK</th>
-        <th>Total NG</th>
-        <th>Downtime (menit)</th>
-    </tr>';
+    
+echo '<tr>
+    <th>No</th>
+    <th>Tanggal Produksi</th>
+    <th>Shift</th>
+    <th>Line</th>
+    <th>Mesin</th>
+    <th>Urutan</th>
+    <th>Jam Rencana Mulai</th>
+    <th>Jam Rencana Selesai</th>
+    <th>Kode Part</th>
+    <th>Nama Part</th>
+    <th>JO Injection</th>
+    <th>JO Second Proses</th>
+    <th>Operator Utama</th>
+    <th>Operator SP</th>
+    <th>QC / IPQC</th>
+    <th>Kategori NG</th>
+    <th>Status</th>
+    <th>Target Planning</th>
+    <th>Total OK</th>
+    <th>Pencapaian Target (%)</th>
+    <th>Total NG</th>
+    <th>Downtime (menit)</th>
+    <th>Effective Run Time</th>
+</tr>';
 
     foreach ($rows as $i => $r) {
 
@@ -553,45 +595,68 @@ if ($export && !$errors) {
         echo '<td>' .
             h($r['kategori_ng'] ?: '-') .
         '</td>';
+ 
+        echo '<td>' . h($r['status_planning']) . '</td>';
+
+        echo '<td>' . (int)($r['target_planning'] ?? 0) . '</td>';
+
+        echo '<td>' . (int)$r['total_ok'] . '</td>';
 
         echo '<td>' .
-            h($r['status_planning']) .
+            ($r['persentase_target'] !== null
+                ? number_format($r['persentase_target'], 2) . '%'
+                : '-') .
         '</td>';
 
-        echo '<td>' .
-            (int)($r['target_planning'] ?? 0) .
-        '</td>';
+        echo '<td>' . (int)$r['total_ng'] . '</td>';
 
-        echo '<td>' .
-            (int)$r['total_ok'] .
-        '</td>';
+        echo '<td>' . (int)$r['total_downtime'] . '</td>';
 
-        echo '<td>' .
-            (int)$r['total_ng'] .
-        '</td>';
+        $runtimeMenit = $r['effective_runtime_menit'];
 
-        echo '<td>' .
-            (int)$r['total_downtime'] .
-        '</td>';
+        $runtimeText = $runtimeMenit !== null
+            ? intdiv($runtimeMenit, 60) . ' jam ' .
+                ($runtimeMenit % 60) . ' menit'
+            : '-';
+
+        echo '<td>' . h($runtimeText) . '</td>';
 
         echo '</tr>';
+
     }
 
     /*
      * Kolom kategori NG tidak dijumlahkan karena berisi teks.
      * Total tetap sesuai dengan 21 kolom Excel.
      */
-    echo '<tr>
-        <th colspan="17">TOTAL</th>
-        <th>' . (int)$summary['target'] . '</th>
-        <th>' . (int)$summary['ok'] . '</th>
-        <th>' . (int)$summary['ng'] . '</th>
-        <th>' . (int)$summary['downtime'] . '</th>
-    </tr>';
+    
+        $persentaseTotalExcel = $summary['target'] > 0
+            ? ($summary['ok'] / $summary['target']) * 100
+            : null;
 
-    echo '</table>';
+        $runtimeTotalExcel = (int)$summary['effective_runtime'];
 
-    exit;
+        $runtimeTotalTextExcel =
+            intdiv($runtimeTotalExcel, 60) . ' jam ' .
+            ($runtimeTotalExcel % 60) . ' menit';
+
+        echo '<tr>
+            <th colspan="17">TOTAL</th>
+            <th>' . (int)$summary['target'] . '</th>
+            <th>' . (int)$summary['ok'] . '</th>
+            <th>' .
+                ($persentaseTotalExcel !== null
+                    ? number_format($persentaseTotalExcel, 2) . '%'
+                    : '-') .
+            '</th>
+            <th>' . (int)$summary['ng'] . '</th>
+            <th>' . (int)$summary['downtime'] . '</th>
+            <th>' . h($runtimeTotalTextExcel) . '</th>
+        </tr>';
+
+        echo '</table>';
+        exit;
+
 }
 
 
@@ -666,41 +731,240 @@ $pageTitle = 'Rekap Laporan Produksi';
         <div class="col-12 col-lg"><div class="panel summary-card"><div class="summary-label"><i class="bi bi-stopwatch me-1 text-warning"></i> Downtime</div><div class="summary-value"><?= number_format($summary['downtime']) ?> <span class="fs-6 fw-semibold">menit</span></div></div></div>
     </div>
 
-    <section id="daftarRekap" class="panel p-3 p-lg-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div><h2 class="h5 fw-bold mb-1">Daftar Rekap</h2><div class="text-secondary small">Ditemukan <?= number_format(count($rows)) ?> planning.</div></div>
-            <span class="badge text-bg-light border">Periode <?= h($tanggalMulai ?: 'Semua') ?> — <?= h($tanggalSelesai ?: 'Semua') ?></span>
+    
+<section id="daftarRekap" class="panel p-3 p-lg-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="h5 fw-bold mb-1">Daftar Rekap</h2>
+            <div class="text-secondary small">
+                Ditemukan <?= number_format(count($rows)) ?> planning.
+            </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover table-bordered align-middle mb-0">
-                <thead><tr><th>No</th><th>Tanggal</th><th>Shift</th><th>Line</th><th>Mesin</th><th>Urutan</th><th>Jam Rencana</th><th>Part</th><th>JO Injection</th><th>JO Second Proses</th><th>Operator INJ</th><th>Operator SP</th><th>QC / IPQC</th><th>Status</th><th>Target</th><th>OK</th><th>NG</th><th>Downtime (menit)</th></tr></thead>
-                <tbody>
-                <?php if (!$rows): ?><tr><td colspan="18" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Tidak ada data untuk filter yang dipilih.</td></tr>
-                <?php else: foreach ($rows as $i => $r): ?>
+
+        <span class="badge text-bg-light border">
+            Periode <?= h($tanggalMulai ?: 'Semua') ?>
+            — <?= h($tanggalSelesai ?: 'Semua') ?>
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle mb-0">
+
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Tanggal</th>
+                    <th>Shift</th>
+                    <th>Line</th>
+                    <th>Mesin</th>
+                    <th>Urutan</th>
+                    <th>Jam Rencana</th>
+                    <th>Part</th>
+                    <th>JO Injection</th>
+                    <th>JO Second Proses</th>
+                    <th>Operator INJ</th>
+                    <th>Operator SP</th>
+                    <th>QC / IPQC</th>
+                    <th>Status</th>
+                    <th class="text-end">Target</th>
+                    <th class="text-end">OK</th>
+                    <th class="text-end">Pencapaian Target</th>
+                    <th class="text-end">NG</th>
+                    <th class="text-end">Downtime (menit)</th>
+                    <th>Effective Run Time</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            <?php if (!$rows): ?>
+
+                <tr>
+                    <td colspan="20" class="text-center text-secondary py-5">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        Tidak ada data untuk filter yang dipilih.
+                    </td>
+                </tr>
+
+            <?php else: ?>
+
+                <?php foreach ($rows as $i => $r): ?>
+                    <?php
+                    $persentaseTarget = $r['persentase_target'];
+                    $runtimeMenit = $r['effective_runtime_menit'];
+
+                    $runtimeText = '-';
+
+                    if ($runtimeMenit !== null) {
+                        $runtimeText =
+                            intdiv($runtimeMenit, 60) . 'j ' .
+                            ($runtimeMenit % 60) . 'm';
+                    }
+
+                    $statusClass = [
+                        'SELESAI' => 'success',
+                        'BERJALAN' => 'primary',
+                        'TERJADWAL' => 'secondary',
+                        'BATAL' => 'danger'
+                    ];
+                    ?>
+
                     <tr>
-                        <td><?= $i + 1 ?></td><td><?= h(date('d-m-Y', strtotime($r['tanggal_produksi']))) ?></td><td><span class="badge text-bg-light border">Shift <?= h($r['shift']) ?></span></td>
-                        <td><?= h($r['nama_line']) ?></td><td><?= h($r['nama_mesin']) ?></td><td><?= h($r['urutan']) ?></td>
+                        <td><?= $i + 1 ?></td>
+
                         <td>
-                            <?= h(date('H:i', strtotime((string)$r['waktu_mulai']))) ?>
-                            –
-                            <?= h(date('H:i', strtotime((string)$r['waktu_selesai']))) ?>
+                            <?= h(date(
+                                'd-m-Y',
+                                strtotime($r['tanggal_produksi'])
+                            )) ?>
                         </td>
-                        <td><div class="fw-semibold"><?= h($r['kode_part']) ?></div><div class="small text-secondary"><?= h($r['nama_part']) ?></div></td>
-                        <td><?= h($r['no_jo_injection'] ?: '-') ?></td><td><?= h($r['no_jo_second_proses'] ?: '-') ?></td>
-                        <td><?= h($r['nama_operator_utama'] ?: '-') ?></td><td><?= h($r['nama_operator_second_proses'] ?: '-') ?></td><td><?= h($r['nama_ipqc'] ?: '-') ?></td>
-                        <td><?php $statusClass = ['SELESAI'=>'success','BERJALAN'=>'primary','TERJADWAL'=>'secondary','BATAL'=>'danger']; ?><span class="badge text-bg-<?= $statusClass[$r['status_planning']] ?? 'secondary' ?>"><?= h($r['status_planning']) ?></span></td>
-                        <td class="text-end"><?= number_format((int)($r['target_planning'] ?? 0)) ?></td><td class="text-end fw-semibold text-success"><?= number_format((int)$r['total_ok']) ?></td><td class="text-end fw-semibold text-danger"><?= number_format((int)$r['total_ng']) ?></td><td class="text-end"><?= number_format((int)$r['total_downtime']) ?></td>
+
+                        <td>
+                            <span class="badge text-bg-light border">
+                                Shift <?= h($r['shift']) ?>
+                            </span>
+                        </td>
+
+                        <td><?= h($r['nama_line']) ?></td>
+                        <td><?= h($r['nama_mesin']) ?></td>
+                        <td><?= h($r['urutan']) ?></td>
+
+                        <td>
+                            <?= h(date(
+                                'H:i',
+                                strtotime((string)$r['waktu_mulai'])
+                            )) ?>
+                            –
+                            <?= h(date(
+                                'H:i',
+                                strtotime((string)$r['waktu_selesai'])
+                            )) ?>
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold">
+                                <?= h($r['kode_part']) ?>
+                            </div>
+                            <div class="small text-secondary">
+                                <?= h($r['nama_part']) ?>
+                            </div>
+                        </td>
+
+                        <td><?= h($r['no_jo_injection'] ?: '-') ?></td>
+                        <td><?= h($r['no_jo_second_proses'] ?: '-') ?></td>
+                        <td><?= h($r['nama_operator_utama'] ?: '-') ?></td>
+                        <td><?= h($r['nama_operator_second_proses'] ?: '-') ?></td>
+                        <td><?= h($r['nama_ipqc'] ?: '-') ?></td>
+
+                        <td>
+                            <span class="badge text-bg-<?= $statusClass[$r['status_planning']] ?? 'secondary' ?>">
+                                <?= h($r['status_planning']) ?>
+                            </span>
+                        </td>
+
+                        <td class="text-end">
+                            <?= number_format((int)($r['target_planning'] ?? 0)) ?>
+                        </td>
+
+                        <td class="text-end fw-semibold text-success">
+                            <?= number_format((int)$r['total_ok']) ?>
+                        </td>
+
+                        <td class="text-end">
+                            <?php if ($persentaseTarget !== null): ?>
+                                <span class="badge <?= $persentaseTarget >= 100 ? 'text-bg-success' : 'text-bg-warning' ?>">
+                                    <?= number_format($persentaseTarget, 2) ?>%
+                                </span>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+
+                        <td class="text-end fw-semibold text-danger">
+                            <?= number_format((int)$r['total_ng']) ?>
+                        </td>
+
+                        <td class="text-end">
+                            <?= number_format((int)$r['total_downtime']) ?>
+                        </td>
+
+                        <td class="text-nowrap">
+                            <?= h($runtimeText) ?>
+                        </td>
                     </tr>
-                <?php endforeach; endif; ?>
-                </tbody>
-                <?php if ($rows): ?><tfoot class="table-light fw-bold"><tr><td colspan="14" class="text-end">TOTAL</td><td class="text-end"><?= number_format($summary['target']) ?></td><td class="text-end text-success"><?= number_format($summary['ok']) ?></td><td class="text-end text-danger"><?= number_format($summary['ng']) ?></td><td class="text-end"><?= number_format($summary['downtime']) ?></td></tr></tfoot><?php endif; ?>
-            </table>
+
+                <?php endforeach; ?>
+
+            <?php endif; ?>
+            </tbody>
+
+            <?php if ($rows): ?>
+                <?php
+                $persentaseTotal = $summary['target'] > 0
+                    ? ($summary['ok'] / $summary['target']) * 100
+                    : null;
+
+                $runtimeTotalMenit = (int)$summary['effective_runtime'];
+
+                $runtimeTotalText =
+                    intdiv($runtimeTotalMenit, 60) . 'j ' .
+                    ($runtimeTotalMenit % 60) . 'm';
+                ?>
+
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="14" class="text-end">
+                            TOTAL
+                        </td>
+
+                        <td class="text-end">
+                            <?= number_format($summary['target']) ?>
+                        </td>
+
+                        <td class="text-end text-success">
+                            <?= number_format($summary['ok']) ?>
+                        </td>
+
+                        <td class="text-end">
+                            <?= $persentaseTotal !== null
+                                ? number_format($persentaseTotal, 2) . '%'
+                                : '-' ?>
+                        </td>
+
+                        <td class="text-end text-danger">
+                            <?= number_format($summary['ng']) ?>
+                        </td>
+
+                        <td class="text-end">
+                            <?= number_format($summary['downtime']) ?>
+                        </td>
+
+                        <td class="text-nowrap">
+                            <?= h($runtimeTotalText) ?>
+                        </td>
+                    </tr>
+                </tfoot>
+            <?php endif; ?>
+
+        </table>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
+        <div class="small text-secondary">
+            Data berdasarkan planning produksi dan total laporan per jam.
         </div>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
-            <div class="small text-secondary">Data berdasarkan planning produksi dan total laporan per jam.</div>
-            <a class="btn btn-success" href="<?= h('index.php?' . http_build_query(array_merge($_GET, ['export' => 'excel']))) ?>"><i class="bi bi-file-earmark-excel me-1"></i> Export Excel</a>
-        </div>
-    </section>
+
+        <a class="btn btn-success"
+           href="<?= h('index.php?' . http_build_query(
+               array_merge($_GET, ['export' => 'excel'])
+           )) ?>">
+            <i class="bi bi-file-earmark-excel me-1"></i>
+            Export Excel
+        </a>
+    </div>
+
+</section>
+
     <div class="text-center text-secondary small mt-3">Sistem Laporan Produksi · <?= date('Y') ?></div>
 </div>
 <script>
