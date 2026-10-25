@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 22 Okt 2026 pada 12.01
+-- Waktu pembuatan: 25 Okt 2026 pada 20.37
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.0.30
 
@@ -262,17 +262,22 @@ CREATE TABLE `master_part` (
   `keterangan` text DEFAULT NULL,
   `status` enum('AKTIF','NONAKTIF') NOT NULL DEFAULT 'AKTIF',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `berat_part` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `berat_runner` decimal(10,2) NOT NULL DEFAULT 0.00
 ) ;
 
 --
 -- Dumping data untuk tabel `master_part`
 --
 
-INSERT INTO `master_part` (`id`, `kode_part`, `nama_part`, `cycle_time`, `cavity`, `target_per_jam`, `target_per_shift`, `target_per_hari`, `material`, `warna`, `terdapat_second_proses`, `keterangan`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'PRT-001', 'Housing A', 58.00, 1, 60, 240, 720, 'ABS', 'Putih', 0, '', 'AKTIF', '2026-10-13 09:52:37', '2026-10-13 09:54:32'),
-(2, 'PRT-002', 'Front Rear Top', 90.00, 1, 40, 290, 840, 'PP', 'Putih', 1, '', 'AKTIF', '2026-10-14 16:27:28', '2026-10-14 16:27:28'),
-(3, 'PRT-003', 'Cover Rear', 85.00, 1, 40, 293, 845, 'PP', 'Black', 1, 'PT. MEI', 'AKTIF', '2026-10-14 21:04:30', '2026-10-14 21:04:30');
+INSERT INTO `master_part` (`id`, `kode_part`, `nama_part`, `cycle_time`, `cavity`, `target_per_jam`, `target_per_shift`, `target_per_hari`, `material`, `warna`, `terdapat_second_proses`, `keterangan`, `status`, `created_at`, `updated_at`, `berat_part`, `berat_runner`) VALUES
+(1, 'PRT-001', 'Housing A', 58.00, 1, 60, 240, 720, 'ABS', 'Putih', 0, '', 'AKTIF', '2026-10-13 09:52:37', '2026-10-13 09:54:32', 0.00, 0.00),
+(2, 'PRT-002', 'Front Rear Top', 90.00, 1, 40, 290, 840, 'PP', 'Putih', 1, '', 'AKTIF', '2026-10-14 16:27:28', '2026-10-14 16:27:28', 0.00, 0.00),
+(3, 'PRT-003', 'Cover Rear', 85.00, 1, 40, 293, 845, 'PP', 'Black', 1, 'PT. MEI', 'AKTIF', '2026-10-14 21:04:30', '2026-10-14 21:04:30', 0.00, 0.00),
+(4, 'PRT-004', 'Cover Back', 30.00, 1, 50, 300, 900, 'PP', 'Hitam', 0, '', 'AKTIF', '2026-10-24 19:10:47', '2026-10-24 19:29:24', 0.10, 0.03),
+(5, 'PRT-005', 'Cover White', 40.00, 1, 45, 350, 900, 'ABS', 'Hitam', 1, '', 'AKTIF', '2026-10-24 19:31:57', '2026-10-24 19:38:54', 0.16, 0.03),
+(6, 'PRT-006', 'Cover White 2', 50.00, 1, 50, 300, 700, 'PP', 'White', 0, '', 'AKTIF', '2026-10-24 19:33:42', '2026-10-24 19:33:42', 0.10, 0.03);
 
 -- --------------------------------------------------------
 
@@ -325,7 +330,9 @@ INSERT INTO `planning_produksi` (`id`, `tanggal_produksi`, `shift`, `mesin_id`, 
 (7, '2026-10-17', 1, 1, 1, 1, '2026-10-17 07:30:00', '2026-10-17 10:30:00', 58.00, 1, 60, 240, 720, 0, 180, 'SELESAI', 1, 2, '2026-10-17 02:07:51', '2026-10-18 01:10:10', '2026-10-16 19:06:56', '2026-10-17 18:10:10', 'INJ-002', '', '', 'Makmur ajib', 22, 51, '2026-10-18 00:59:15'),
 (8, '2026-10-17', 3, 1, 2, 1, '2026-10-17 23:30:00', '2026-10-18 07:30:00', 90.00, 1, 40, 290, 840, 1, 320, 'TERJADWAL', 1, NULL, NULL, NULL, '2026-10-17 18:18:20', '2026-10-17 18:18:20', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (9, '2026-10-18', 1, 1, 3, 1, '2026-10-18 07:30:00', '2026-10-18 15:30:00', 85.00, 1, 40, 293, 845, 1, 320, 'SELESAI', 1, 2, '2026-10-18 10:09:06', '2026-10-21 20:58:57', '2026-10-17 19:28:48', '2026-10-21 13:58:57', NULL, NULL, NULL, NULL, NULL, NULL, '2026-10-21 20:58:51'),
-(10, '2026-10-21', 3, 1, 1, 1, '2026-10-21 23:30:00', '2026-10-22 07:30:00', 58.00, 1, 60, 240, 720, 0, 480, 'SELESAI', 1, 2, '2026-10-22 14:45:10', '2026-10-22 16:02:33', '2026-10-21 14:31:33', '2026-10-22 09:02:33', '1000123', '', '', 'Juned', 10000, 10308, '2026-10-22 16:02:28');
+(10, '2026-10-21', 3, 1, 1, 1, '2026-10-21 23:30:00', '2026-10-22 07:30:00', 58.00, 1, 60, 240, 720, 0, 480, 'SELESAI', 1, 2, '2026-10-22 14:45:10', '2026-10-22 16:02:33', '2026-10-21 14:31:33', '2026-10-22 09:02:33', '1000123', '', '', 'Juned', 10000, 10308, '2026-10-22 16:02:28'),
+(11, '2026-10-25', 1, 2, 2, 1, '2026-10-25 07:30:00', '2026-10-25 15:30:00', 90.00, 1, 40, 290, 840, 1, 320, 'TERJADWAL', 1, NULL, NULL, NULL, '2026-10-24 18:28:06', '2026-10-24 18:28:06', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, '2026-10-25', 2, 1, 1, 1, '2026-10-25 15:30:00', '2026-10-25 20:30:00', 58.00, 1, 60, 240, 720, 0, 300, 'TERJADWAL', 1, NULL, NULL, NULL, '2026-10-24 18:29:00', '2026-10-24 18:29:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
