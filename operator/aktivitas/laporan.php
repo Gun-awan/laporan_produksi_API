@@ -266,7 +266,7 @@ if ($aksi === 'update_laporan') {
         );
     }
     if (!empty($planning['stop_jo_at'])) {
-        throw new Exception('JO sudah di-Stop JO. Laporan tidak dapat diubah lagi.');
+        throw new Exception('Produksi sudah di-Stop. Laporan tidak dapat diubah lagi.');
     }
 
     // Identitas produksi wajib lengkap sebelum laporan per jam disimpan.
@@ -599,7 +599,7 @@ if (!empty($kategoriNGPost)) {
                 throw new Exception('Planning tidak sedang berjalan.');
             }
             if (!empty($planning['stop_jo_at'])) {
-                throw new Exception('JO sudah di-Stop JO sehingga downtime baru tidak dapat dicatat.');
+                throw new Exception('Produksi sudah di-Stop, sehingga downtime baru tidak dapat dicatat.');
             }
 
             if (($_POST['konfirmasi_chiller'] ?? '') !== '1') {
@@ -791,12 +791,12 @@ if ($aksi === 'stop_jo') {
     $stmt->close();
 
     if ($affected !== 1) {
-        throw new Exception('Stop JO gagal disimpan. Muat ulang halaman dan coba lagi.');
+        throw new Exception('Stop Produksi gagal disimpan. Muat ulang halaman dan coba lagi.');
     }
 
     $_SESSION['flash_laporan'] = [
         'type' => 'warning',
-        'message' => 'JO dihentikan pada ' . $waktuStopJo . '. Periksa laporan, lalu klik Selesai Produksi untuk menutupnya.'
+        'message' => 'Produksi dihentikan pada ' . $waktuStopJo . '. Periksa laporan, lalu klik Selesai Produksi untuk menutupnya.'
     ];
     redirectLaporan($planningId, $slotPost);
 }
@@ -1684,7 +1684,7 @@ $joStopped = !empty($planning['stop_jo_at']);
         <?php else: ?>
             <div class="alert alert-secondary">
                 <?php if ($joStopped): ?>
-                    JO sudah dihentikan. Data laporan dikunci; klik Selesai Produksi untuk menutup planning.
+                    Produksi sudah dihentikan. Data laporan dikunci; klik Selesai Produksi untuk menutup planning.
                 <?php else: ?>
                     Planning ini tidak lagi berstatus BERJALAN. Form laporan hanya dapat dibaca.
                 <?php endif; ?>
@@ -1987,7 +1987,7 @@ function tampilkanNotifikasiStopJo() {
     alertBox.id = 'alertStopJoWajib';
     alertBox.className = 'alert alert-warning alert-dismissible fade show floating-alert mb-0';
     alertBox.setAttribute('role', 'alert');
-    alertBox.innerHTML = '<strong>Perhatian!</strong> Stop JO terlebih dahulu untuk menyelesaikan laporan.' +
+    alertBox.innerHTML = '<strong>Perhatian!</strong> Stop Produksi terlebih dahulu untuk menyelesaikan laporan.' +
         '<button type="button" class="btn-close" aria-label="Tutup"></button>';
     document.body.appendChild(alertBox);
     alertBox.querySelector('.btn-close').addEventListener('click', () => alertBox.remove());
