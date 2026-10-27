@@ -1009,7 +1009,7 @@ unset($_SESSION['flash_part']);
 
                                         <td><?= (int) $part['cavity'] ?></td>
 
-                                        <td class="target-value">
+                                        <td>
                                             <?= number_format(
                                                 (float) ($part['berat_part'] ?? 0),
                                                 2,
@@ -1018,7 +1018,7 @@ unset($_SESSION['flash_part']);
                                             ) ?> gr
                                         </td>
 
-                                        <td class="target-value">
+                                        <td>
                                             <?= number_format(
                                                 (float) ($part['berat_runner'] ?? 0),
                                                 2,
@@ -1027,7 +1027,7 @@ unset($_SESSION['flash_part']);
                                             ) ?> gr
                                         </td>
 
-                                        <td class="target-value">
+                                        <td>
                                             <?= number_format(
                                                 (int) $part['target_per_jam'],
                                                 0,
@@ -1036,7 +1036,7 @@ unset($_SESSION['flash_part']);
                                             ) ?>
                                         </td>
 
-                                        <td class="target-value">
+                                        <td>
                                             <?= number_format(
                                                 (int) $part['target_per_shift'],
                                                 0,
@@ -1045,7 +1045,7 @@ unset($_SESSION['flash_part']);
                                             ) ?>
                                         </td>
 
-                                        <td class="target-value">
+                                        <td>
                                             <?= number_format(
                                                 (int) $part['target_per_hari'],
                                                 0,

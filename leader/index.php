@@ -331,7 +331,22 @@ foreach ($planningRows as $row) {
 <div class="page-wrap">
     <header class="hero mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div><div class="text-white-50 small mb-1">SISTEM LAPORAN PRODUKSI</div><h1 class="h3 mb-1">Monitoring Produksi</h1><div class="text-white-50">Halo, <?= e($leaderNama) ?>. Pantau hasil produksi dan koreksi laporan per jam.</div></div>
-        <div class="d-flex gap-2"><a class="btn btn-light" href="../dashboard/index.php"><i class="bi bi-house-door me-1"></i> Dashboard</a><a class="btn btn-outline-light" href="../auth/logout.php"><i class="bi bi-box-arrow-right me-1"></i> Keluar</a></div>
+        <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-light" href="../dashboard/index.php">
+        <i class="bi bi-house-door me-1"></i>
+        Dashboard
+    </a>
+
+    <a class="btn btn-warning" href="rekap_ng.php">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Rekap NG
+    </a>
+
+    <a class="btn btn-outline-light" href="../auth/logout.php">
+        <i class="bi bi-box-arrow-right me-1"></i>
+        Keluar
+    </a>
+</div>
     </header>
 
     <?php if ($flash): ?><div id="flashLeader" class="alert alert-<?= e($flash['type']) ?> flash-alert alert-dismissible fade show" role="alert"><i class="bi bi-info-circle me-2"></i><?= e($flash['message']) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button></div><?php endif; ?>

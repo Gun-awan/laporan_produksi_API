@@ -258,9 +258,6 @@ if ($aksi === 'simpan_identitas') {
     redirectLaporan($planningId, $slotPost, 'identitasProduksi');
 }
 
-
-        
-
 if ($aksi === 'update_laporan') {
 
     if ($planning['status'] !== 'BERJALAN') {
@@ -605,6 +602,12 @@ if (!empty($kategoriNGPost)) {
                 throw new Exception('JO sudah di-Stop JO sehingga downtime baru tidak dapat dicatat.');
             }
 
+            if (($_POST['konfirmasi_chiller'] ?? '') !== '1') {
+                $error = 'Pastikan Chiler dalam kondisi mati terlebih dahulu.';
+            } else {
+                // Lanjutkan proses Stop Mesin yang sudah ada.
+            }
+
             $downtimeId = filter_var($_POST['downtime_id'] ?? '', FILTER_VALIDATE_INT);
             $ketDowntime = trim($_POST['keterangan_downtime'] ?? '');
 
@@ -803,7 +806,7 @@ if ($aksi === 'selesai_produksi') {
         throw new Exception('Planning ini tidak sedang berjalan.');
     }
     if (empty($planning['stop_jo_at'])) {
-        throw new Exception('Klik Stop JO terlebih dahulu sebelum Selesai Produksi.');
+        throw new Exception('Stop Produksi terlebih dahulu sebelum Selesai Produksi.');
     }
 
     // Produksi tidak boleh diakhiri saat downtime masih aktif.
@@ -1658,11 +1661,11 @@ $joStopped = !empty($planning['stop_jo_at']);
     <button type="button" class="btn btn-warning btn-lg w-100 mb-2"
             data-bs-toggle="modal" data-bs-target="#modalStopJo"
             <?= $downtimeAktif ? 'disabled' : '' ?>>
-        <i class="bi bi-stop-circle me-1"></i> Stop JO
+        <i class="bi bi-stop-circle me-1"></i> Stop Produksi
     </button>
 <?php else: ?>
     <div class="alert alert-warning">
-        <strong>JO sudah di-Stop:</strong> <?= e($planning['stop_jo_at']) ?>.
+        <strong>Produksi sudah di-Stop:</strong> <?= e($planning['stop_jo_at']) ?>.
         Effective runtime dihitung sampai waktu ini. Klik Selesai Produksi untuk menutup laporan.
     </div>
 <?php endif; ?>
@@ -1724,15 +1727,47 @@ $joStopped = !empty($planning['stop_jo_at']);
                             <div class="form-text text-danger">Belum ada alasan downtime aktif di master downtime.</div>
                         <?php endif; ?>
                     </div>
-
+                    
                     <div class="mb-3">
                         <label class="form-label">Keterangan Tambahan</label>
-                        <textarea name="keterangan_downtime" class="form-control" rows="3"
-                                  placeholder="Jelaskan kondisi mesin..."></textarea>
+                        <textarea
+                            name="keterangan_downtime"
+                            class="form-control"
+                            rows="3"
+                            placeholder="Jelaskan kondisi mesin..."
+                        ></textarea>
                     </div>
+
+                    <!-- Konfirmasi Chiller -->
+                    <div class="mb-3">
+                        <div class="form-check p-3 border border-warning rounded-3 bg-warning bg-opacity-10">
+                            <input
+                                type="checkbox"
+                                class="form-check-input ms-0 me-2"
+                                id="konfirmasiChiller"
+                                name="konfirmasi_chiller"
+                                value="1"
+                                required
+                            >
+
+                            <label
+                                class="form-check-label fw-semibold"
+                                for="konfirmasiChiller"
+                            >
+                                Pastikan Chiler dalam kondisi mati
+                                <span class="text-danger">*</span>
+                            </label>
+                        </div>
+
+                        <div class="form-text text-danger">
+                            Wajib dicentang sebelum melakukan Stop Mesin.
+                        </div>
+                    </div>
+
                     <div class="small text-secondary">
                         Waktu mulai downtime dicatat otomatis oleh server saat tombol konfirmasi ditekan.
                     </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
